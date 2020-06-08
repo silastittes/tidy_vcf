@@ -11,13 +11,13 @@ parser.add_argument('-v', '--vcf', nargs="?", type=str, required = True,
 		    help='VCF input file. Should end in .vcf or .gz (plain text or compressed).')
 
 parser.add_argument('-o', '--sites_out', nargs="?", type=str, required = True,
-		    help='Name of output file for tidy sites data.')
+		    help='Name of output file for tidy sites data. Cannot be used simultaneously with --thin')
 
 parser.add_argument('-g', '--genotype_out', nargs="?", type=str, required = True,
 		    help='Name of output file for tidy genotype data.')
 
 parser.add_argument('-t', '--thin', type=int, required = False,
-    help = 'Alternative to --sites, where a sites will be selected no less than --thin bases apart.')
+    help = 'Alternative to --sites, where a sites will be selected no less than THIN bases apart.')
 
 args = parser.parse_args()
 

@@ -8,7 +8,8 @@ Depends on `python3` with the `argparse` and `gzip` libraries available.
 ## Usage
 
 ```
-usage: tidy_vcf.py [-h] -s [SITES] -v [VCF] -o [SITES_OUT] -g [GENOTYPE_OUT]
+usage: tidy_vcf.py [-h] [-s [SITES]] -v [VCF] -o [SITES_OUT] -g [GENOTYPE_OUT]
+                   [-t THIN]
 
 Given a vcf file and a file of sites, produces a tidy versions of sites and
 genotypes data, in efforts to make it easier to calculate summary statitics
@@ -24,9 +25,12 @@ optional arguments:
                         VCF input file. Should end in .vcf or .gz (plain text
                         or compressed).
   -o [SITES_OUT], --sites_out [SITES_OUT]
-                        Name of output file for tidy sites data.
+                        Name of output file for tidy sites data. Cannot be
+                        used simultaneously with --thin
   -g [GENOTYPE_OUT], --genotype_out [GENOTYPE_OUT]
                         Name of output file for tidy genotype data.
+  -t THIN, --thin THIN  Alternative to --sites, where a sites will be selected
+                        no less than THIN bases apart.
 ```
 
 
@@ -36,6 +40,12 @@ For example `sites.txt` contains 1,000 sites, the following command will generat
 
 ```
 python tidy_vcf.py -s sites.txt -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
+```
+
+Alternatively, you can also using the `-t` argument, which specifies how far apart sampled positions should be:
+
+```
+tidy_vcf.py -t 1000 -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
 ```
 
 # Now what?
