@@ -3,6 +3,8 @@ Converts a sample of sites from standard VCF table into tidy format for easy sum
 
 It's often desirable to get a sense of the site and genotype metrics from a VCF file prior to filtering. This simple program is designed to faciltate that. While there are excellent tools like `bcftools stats` to do this already, the summary statistics gathered are very simple and not very customizable. If you don't mind exchanging speed for more information and flexibility, give this tool a try.
 
+## Usage
+
 ```
 usage: tidy_vcf.py [-h] -s [SITES] -v [VCF] -o [SITES_OUT] -g [GENOTYPE_OUT]
 
@@ -26,7 +28,7 @@ optional arguments:
 ```
 
 
-#Working example command:
+## Working example command:
 
 For example `sites.txt` contains 1,000 sites, the following command will generate to two tidy data files:
 
@@ -34,7 +36,7 @@ For example `sites.txt` contains 1,000 sites, the following command will generat
 python tidy_vcf.py -s sites.txt -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
 ```
 
-#Now what?
+# Now what?
 
 The sites and genotypes file are easy to load into R or Python for summary and visualzation.
 
@@ -78,7 +80,7 @@ genos %>%
 
 
 
-#How to get sites
+## How to get sites
 
 One tedious part of this is needing sites to sample before hand. Assuming you don't already have interest in some set, one way to get a random set would be:
 
