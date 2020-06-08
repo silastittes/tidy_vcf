@@ -8,8 +8,8 @@ Depends on `python3` with the `argparse` and `gzip` libraries available.
 ## Usage
 
 ```
-usage: tidy_vcf.py [-h] [-s [SITES]] -v [VCF] -o [SITES_OUT] -g [GENOTYPE_OUT]
-                   [-t THIN]
+usage: tidy_vcf.py [-h] [-s [SITES]] [-t THIN] -v [VCF] -o [SITES_OUT] -g
+                   [GENOTYPE_OUT]
 
 Given a vcf file and a file of sites, produces a tidy versions of sites and
 genotypes data, in efforts to make it easier to calculate summary statitics
@@ -21,6 +21,8 @@ optional arguments:
                         Input file listing tab delimited sites to output. Each
                         line must be a chromosome/scaffold name and the
                         1-indexed position of the site.
+  -t THIN, --thin THIN  Alternative to --sites, where a sites will be selected
+                        no less than THIN bases apart.
   -v [VCF], --vcf [VCF]
                         VCF input file. Should end in .vcf or .gz (plain text
                         or compressed).
@@ -29,8 +31,7 @@ optional arguments:
                         used simultaneously with --thin
   -g [GENOTYPE_OUT], --genotype_out [GENOTYPE_OUT]
                         Name of output file for tidy genotype data.
-  -t THIN, --thin THIN  Alternative to --sites, where a sites will be selected
-                        no less than THIN bases apart.
+
 ```
 
 

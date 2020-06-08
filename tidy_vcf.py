@@ -7,6 +7,9 @@ parser = argparse.ArgumentParser(description="Given a vcf file and a file of sit
 parser.add_argument('-s', '--sites', nargs="?", type=str, required = False,
 		    help='Input file listing tab delimited sites to output. Each line must be a chromosome/scaffold name and the 1-indexed position of the site.')
 
+parser.add_argument('-t', '--thin', type=int, required = False,
+    help = 'Alternative to --sites, where a sites will be selected no less than THIN bases apart.')
+
 parser.add_argument('-v', '--vcf', nargs="?", type=str, required = True,
 		    help='VCF input file. Should end in .vcf or .gz (plain text or compressed).')
 
@@ -15,10 +18,6 @@ parser.add_argument('-o', '--sites_out', nargs="?", type=str, required = True,
 
 parser.add_argument('-g', '--genotype_out', nargs="?", type=str, required = True,
 		    help='Name of output file for tidy genotype data.')
-
-parser.add_argument('-t', '--thin', type=int, required = False,
-    help = 'Alternative to --sites, where a sites will be selected no less than THIN bases apart.')
-
 args = parser.parse_args()
 
 if args.sites and not args.thin:
