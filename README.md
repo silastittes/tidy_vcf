@@ -49,6 +49,15 @@ Alternatively, you can also using the `-t` argument, which specifies how far apa
 tidy_vcf.py -t 1000 -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
 ```
 
+
+Alternatively, you can use neither `-t` or `-s`, in which case all sites will be used with a warning.  
+
+```
+tidy_vcf.py -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
+```
+
+
+
 # Now what?
 
 The sites and genotypes file are easy to load into R or Python for summary and visualzation.
@@ -95,11 +104,11 @@ genos %>%
 
 ## How to get sites
 
-One tedious part of this is needing sites to sample before hand. Assuming you don't already have interest in some set, one way to get a random set would be:
+Unless a set of sites is of interest, it probably makes more sense to use the `--thin` flag. However, if you don't want to use `--thin` one way to get a random set would be:
 
 ```
 zcat < test.vcf.gz | grep -v "#" | cut -f1,2 | shuf -n 100 | sort -V > sites.txt
 ```
 
-where `shuf -n` could be modified to a desired number. If your VCF is very large, another approach would likely be needed. 
+where `shuf -n` could be modified to a desired number. If your VCF is very large, another approach to get a set would likely be needed. 
 

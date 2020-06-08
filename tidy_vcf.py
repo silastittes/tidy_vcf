@@ -27,10 +27,7 @@ elif args.thin and not args.sites:
 elif args.thin and args.sites:
     raise ValueError(f'--sites (-s) OR --thin (-t) should be used, not both.')
 else:
-    raise ValueError('--sites (-s) OR --thin (-t) must be used, but neither we given.')
-
-
-
+    print("neither --sites (-s) or --thin (-t) were given. Using all VCF sites. This might take a while.")
 
 sites_out = open(args.sites_out, "w") 
 genotype_file = open(args.genotype_out, "w") 
@@ -101,7 +98,7 @@ def sites_pass(CHROM, POS, sites_dict = None, previous_chrom = '', previous_pos 
     if args.sites:
         if f'{CHROM}\t{POS}' in sites_dict:
             state =True
-    elif args.thin:
+    if args.thin:
         if CHROM == previous_chrom and int(POS) - int(previous_pos) > args.thin:
             state = True
         if CHROM != previous_chrom:
@@ -162,12 +159,15 @@ def parse_file(vcf, sites_file = None):
                     process_site(line, inds, vcf_keys)
                     first = False
                 else:
+                    passing = False
                     if args.sites:
                         passing = sites_pass(CHROM, POS, sites_dict)
-                    if args.thin: 
+                    elif args.thin: 
                         passing = sites_pass(CHROM, POS, None, previous_chrom, previous_pos)
                         previous_chrom = CHROM
                         previous_pos = POS
+                    else:
+                        passing = True
                     if passing:
                         process_site(line, inds, vcf_keys)
 
