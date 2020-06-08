@@ -3,6 +3,8 @@ Converts a sample of sites from standard VCF table into tidy format for easy sum
 
 It's often desirable to get a sense of the site and genotype metrics from a VCF file prior to filtering. This simple program is designed to faciltate that. While there are excellent tools like `bcftools stats` to do this already, the summary statistics gathered are very simple and not very customizable. If you don't mind exchanging speed for more information and flexibility, give this tool a try.
 
+Depends on `python3` with the `argparse` and `gzip` libraries available.  
+
 ## Usage
 
 ```
