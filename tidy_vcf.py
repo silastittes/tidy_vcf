@@ -1,9 +1,10 @@
 import gzip
 import argparse
+import random
 
 parser = argparse.ArgumentParser(description="Given a vcf file and a file of sites, produces a tidy versions of sites and genotypes data, in efforts to make it easier to calculate summary statitics and visualizations.")
 
-parser.add_argument('-s', '--sites', nargs="?", type=str, required = True,
+parser.add_argument('-s', '--sites', nargs="?", type=str, required = False,
 		    help='Input file listing tab delimited sites to output. Each line must be a chromosome/scaffold name and the 1-indexed position of the site.')
 
 parser.add_argument('-v', '--vcf', nargs="?", type=str, required = True,
@@ -15,8 +16,22 @@ parser.add_argument('-o', '--sites_out', nargs="?", type=str, required = True,
 parser.add_argument('-g', '--genotype_out', nargs="?", type=str, required = True,
 		    help='Name of output file for tidy genotype data.')
 
+parser.add_argument('-t', '--thin', type=int, required = False,
+    help = 'Alternative to --sites, where a sites will be selected no less than --thin bases apart.')
 
 args = parser.parse_args()
+
+if args.sites and not args.thin:
+    pass
+elif args.thin and not args.sites:
+    pass
+elif args.thin and args.sites:
+    raise ValueError(f'--sites (-s) OR --thin (-t) should be used, not both.')
+else:
+    raise ValueError('--sites (-s) OR --thin (-t) must be used, but neither we given.')
+
+
+
 
 sites_out = open(args.sites_out, "w") 
 genotype_file = open(args.genotype_out, "w") 
@@ -77,10 +92,27 @@ def parse_sites(sites_file):
     with open(sites_file) as fl:
         for line in fl:
             chrom, site = line.strip().split()
-            if chrom not in sites_dict:
-                sites_dict[chrom] = site
+            site_str = f'{chrom}\t{site}'
+            if site_str not in sites_dict:
+                sites_dict[site_str] = ""
     return sites_dict
-      
+
+def sites_pass(CHROM, POS, sites_dict = None, previous_chrom = '', previous_pos = ''):
+    state = False
+    if args.sites:
+        if f'{CHROM}\t{POS}' in sites_dict:
+            state =True
+    elif args.thin:
+        if CHROM == previous_chrom and int(POS) - int(previous_pos) > args.thin:
+            state = True
+        if CHROM != previous_chrom:
+            state = True
+            #print(CHROM == previous_chrom)
+            #print(f'prev is {int(previous_pos)}, current is {int(POS)}')
+            #print(f'prev chrom is {previous_chrom}, current is {CHROM}')
+    return state
+
+
 def openfile(filename):
     if filename.endswith(".gz"):
         return gzip.open(filename, "rt")
@@ -103,10 +135,13 @@ def process_site(line, inds, vcf_keys):
         gt_final = '\t'.join(gt)
         print(f"{ind}\t{site_row}\t{gt_final}", file = genotype_file)
   
-def parse_file(vcf, sites_file):
+def parse_file(vcf, sites_file = None):
+    previous_chrom = ''
+    previous_pos = 0
     vcf_keys = vcf_dict(args.vcf)
     first = True
-    sites_dict = parse_sites(sites_file)
+    if args.sites:
+        sites_dict = parse_sites(sites_file)
     with openfile(vcf) as fl:
         for line in fl:
             if line[0:2] == "##":
@@ -115,20 +150,27 @@ def parse_file(vcf, sites_file):
                 print(ln, file = genotype_file)
             elif line[0:6] == "#CHROM":
                 inds = get_inds(line.strip())
-            elif line[0] != "#" and first: 
+            elif line[0] != "#":
                 vcf_list = line.strip().split("\t")
                 CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT = vcf_list[0:9]
-                GTs = vcf_list[9:]
-                #info_headers = '\t'.join([sc.split("=")[0] for sc in INFO.split(";")])
-                info_headers = build_info(INFO, vcf_keys['info'], True)
-                format_l = '\t'.join(FORMAT.split(":"))
-                print(f"CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\t{info_headers}", file = sites_out)
-                print(f"IND\tCHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\t{format_l}", file = genotype_file)
-                process_site(line, inds, vcf_keys)
-                first = False
-            else:
-                process_site(line, inds, vcf_keys)
-
+                if first:
+                    GTs = vcf_list[9:]
+                    #info_headers = '\t'.join([sc.split("=")[0] for sc in INFO.split(";")])
+                    info_headers = build_info(INFO, vcf_keys['info'], True)
+                    format_l = '\t'.join(FORMAT.split(":"))
+                    print(f"CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\t{info_headers}", file = sites_out)
+                    print(f"IND\tCHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\t{format_l}", file = genotype_file)
+                    process_site(line, inds, vcf_keys)
+                    first = False
+                else:
+                    if args.sites:
+                        passing = sites_pass(CHROM, POS, sites_dict)
+                    if args.thin: 
+                        passing = sites_pass(CHROM, POS, None, previous_chrom, previous_pos)
+                        previous_chrom = CHROM
+                        previous_pos = POS
+                    if passing:
+                        process_site(line, inds, vcf_keys)
 
 parse_file(args.vcf, args.sites)     
 #print(vcf_keys)
