@@ -50,7 +50,7 @@ tidy_vcf.py -t 1000 -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes
 ```
 
 
-Alternatively, you can use neither `-t` or `-s`, in which case all sites will be used with a warning.  
+Alternatively, you can use neither `-t` or `-s`, in which case all sites will be used with a warning: 
 
 ```
 tidy_vcf.py -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
