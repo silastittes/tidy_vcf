@@ -1,2 +1,8 @@
 test_tidy_sites.vcf
 test_tidy_genotypes.vcf
+.*.swp
+__pycache__
+pyslim.egg-info/
+build/
+dist/
+.DS_Store

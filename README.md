@@ -5,15 +5,19 @@ It's often desirable to get a sense of the site and genotype metrics from a VCF 
 
 Depends on `python3` with the `argparse` and `gzip` libraries available.  
 
+
+## Installation
+
+`pip install tidy-vcf`
+
 ## Usage
 
 ```
-usage: tidy_vcf.py [-h] [-s [SITES]] [-t THIN] -v [VCF] -o [SITES_OUT] -g
-                   [GENOTYPE_OUT]
+usage: tidy_vcf [-h] [-s [SITES]] [-t THIN] -v [VCF] -o [SITES_OUT] -g
+                [GENOTYPE_OUT]
 
-Given a vcf file and a file of sites, produces a tidy versions of sites and
-genotypes data, in efforts to make it easier to calculate summary statitics
-and visualizations.
+Given a vcf file, produces a tidy versions of sites and genotypes data, in
+efforts to make it easier to calculate summary statitics and visualizations.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -31,7 +35,6 @@ optional arguments:
                         used simultaneously with --thin
   -g [GENOTYPE_OUT], --genotype_out [GENOTYPE_OUT]
                         Name of output file for tidy genotype data.
-
 ```
 
 
@@ -40,22 +43,21 @@ optional arguments:
 For example `sites.txt` contains 1,000 sites, the following command will generate to two tidy data files:
 
 ```
-python tidy_vcf.py -s sites.txt -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
+tidy_vcf -s sites.txt -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
 ```
 
 Alternatively, you can also using the `-t` argument, which specifies how far apart sampled positions should be:
 
 ```
-tidy_vcf.py -t 1000 -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
+tidy_vcf -t 1000 -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
 ```
 
 
 Alternatively, you can use neither `-t` or `-s`, in which case all sites will be used with a warning: 
 
 ```
-tidy_vcf.py -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
+tidy_vcf -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
 ```
-
 
 
 # Now what?
@@ -68,9 +70,43 @@ Here's a simple example that can be done in R:
 #Read sites data
 sites <- vroom::vroom("test_tidy_sites.vcf", delim = "\t", na = c("NA", "./.", '.'), comment = "#")
 
+head(sites)
+```
+
+```
+# A tibble: 6 x 23
+  CHROM   POS ID    REF   ALT     QUAL FILTER    AC AF       AN BaseQRankSum ClippingRankSum    DP ExcessHet
+  <chr> <dbl> <lgl> <chr> <chr>  <dbl> <lgl>  <dbl> <chr> <dbl>        <dbl>           <dbl> <dbl>     <dbl>
+1 chr1   4240 NA    TC    T,CC   302.  NA       113 0.01…    62        0.277               0   179    3.13  
+2 chr1   4248 NA    A     G     3303.  NA        68 1.000    68       NA                  NA   186    3.01  
+3 chr1   4261 NA    C     T      113.  NA        15 0.214    70       -3.37                0   218    0     
+4 chr1   4375 NA    C     T       41.3 NA         2 0.007   284        0.089               0   878    0.0077
+5 chr1   4441 NA    G     A      110.  NA         2 0.021    96        0.713               0   212    0.0229
+6 chr1   4495 NA    C     T      280.  NA        21 0.250    84        2.07                0   130    0.0017
+# … with 9 more variables: FS <dbl>, InbreedingCoeff <dbl>, MLEAC <dbl>, MLEAF <chr>, MQ <dbl>, MQRankSum <dbl>,
+#   QD <dbl>, ReadPosRankSum <dbl>, SOR <dbl>
+```
+
+```
 #Read genotype data
 genos <-vroom::vroom("test_tidy_genotypes.vcf", delim = "\t", na = c("NA", "./.", '.'), comment = "#")  
+head(genos)
+```
 
+```
+# A tibble: 6 x 13
+  IND        CHROM   POS ID    REF   ALT    QUAL FILTER GT    AD       DP    GQ PL   
+  <chr>      <chr> <dbl> <lgl> <chr> <chr> <dbl> <lgl>  <chr> <chr> <dbl> <dbl> <chr>
+1 JRIAL10-10 chr1   4240 NA    TC    T,CC   302. NA     NA    NA        0     0 NA   
+2 JRIAL10-11 chr1   4240 NA    TC    T,CC   302. NA     NA    NA        0     0 NA   
+3 JRIAL10-12 chr1   4240 NA    TC    T,CC   302. NA     NA    NA        0     0 NA   
+4 JRIAL10-13 chr1   4240 NA    TC    T,CC   302. NA     NA    NA        0     0 NA   
+5 JRIAL10-14 chr1   4240 NA    TC    T,CC   302. NA     NA    NA        0     0 NA   
+6 JRIAL10-15 chr1   4240 NA    TC    T,CC   302. NA     NA    NA        0     0 NA 
+```
+
+
+```
 #For each individual, summarize average proportion of missing genotypes, and average and standard deviation of  depth and genotype quality.
 genos %>% 
   group_by(IND) %>% 
