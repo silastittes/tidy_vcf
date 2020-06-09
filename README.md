@@ -5,7 +5,7 @@ It's often desirable to get a sense of the site and genotype metrics from a VCF 
 
 The program determines the data frame features based on the FORMAT and INFO listed in the VCF header. The output features depend on what is listed in the header. When an individual site does not contain a particular INFO feature, an `NA` is added to the row of that feature. This means the output data frames should contain all the information in the original. It also means the VCF header that faithfully represents what is present in the VCF rows is *absolutely essential.*
 
-Depends on `python3` with the `argparse` and `gzip` libraries available.  
+Depends on `python3` with the `argparse`, `gzip`, and `random` libraries available.  
 
 
 ## Installation
