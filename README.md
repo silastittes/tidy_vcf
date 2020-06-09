@@ -3,7 +3,7 @@ Converts a sample of sites from standard VCF table into tidy format for easy sum
 
 It's often desirable to get a sense of the site and genotype metrics from a VCF file prior to filtering. This simple program is designed to faciltate that. While there are excellent tools like `bcftools stats` to do this already, the summary statistics gathered are very simple and not very customizable. If you don't mind exchanging speed for more information and flexibility, give this tool a try.
 
-The program determines the data frame features based on the FORMAT and INFO listed in the VCF header. The output features depend on what is listed in the header. When an individual site does not contain a particular INFO feature, an `NA` is added to the row of that feature. This means the output data frames should contain all the information in the original.
+The program determines the data frame features based on the FORMAT and INFO listed in the VCF header. The output features depend on what is listed in the header. When an individual site does not contain a particular INFO feature, an `NA` is added to the row of that feature. This means the output data frames should contain all the information in the original. It also means the VCF header that faithfully represents what is present in the VCF rows is *absolutely essential.*
 
 Depends on `python3` with the `argparse` and `gzip` libraries available.  
 
