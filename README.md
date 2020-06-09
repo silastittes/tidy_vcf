@@ -40,6 +40,8 @@ optional arguments:
 
 ## Working example command:
 
+This repo contains necessary examples to test out the utility, but three example commands assume you have installed the program using `pip` above. 
+
 For example `sites.txt` contains 1,000 sites, the following command will generate to two tidy data files:
 
 ```
