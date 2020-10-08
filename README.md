@@ -47,20 +47,20 @@ This repo contains necessary examples to test out the utility, but three example
 For example `sites.txt` contains 1,000 sites, the following command will generate to two tidy data files:
 
 ```
-tidy_vcf -s sites.txt -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
+tidy_vcf -s example/sites.txt -v example/test.vcf.gz -o example/test_tidy_sites.vcf -g example/test_tidy_genotypes.vcf
 ```
 
 Alternatively, you can also using the `-t` argument, which specifies how far apart sampled positions should be:
 
 ```
-tidy_vcf -t 1000 -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
+tidy_vcf -t 1000 -v example/test.vcf.gz -o example/test_tidy_sites.vcf -g example/test_tidy_genotypes.vcf
 ```
 
 
 Alternatively, you can use neither `-t` or `-s`, in which case all sites will be used with a warning: 
 
 ```
-tidy_vcf -v test.vcf.gz -o test_tidy_sites.vcf -g test_tidy_genotypes.vcf
+tidy_vcf -v example/test.vcf.gz -o example/test_tidy_sites.vcf -g example/test_tidy_genotypes.vcf
 ```
 
 
@@ -72,7 +72,7 @@ Here's a simple example that can be done in R:
 
 ```
 #Read sites data
-sites <- vroom::vroom("test_tidy_sites.vcf", delim = "\t", na = c("NA", "./.", '.'), comment = "#")
+sites <- vroom::vroom("example/test_tidy_sites.vcf", delim = "\t", na = c("NA", "./.", '.'), comment = "#")
 
 head(sites)
 ```
@@ -93,7 +93,7 @@ head(sites)
 
 ```
 #Read genotype data
-genos <-vroom::vroom("test_tidy_genotypes.vcf", delim = "\t", na = c("NA", "./.", '.'), comment = "#")  
+genos <-vroom::vroom("example/test_tidy_genotypes.vcf", delim = "\t", na = c("NA", "./.", '.'), comment = "#")  
 head(genos)
 ```
 
@@ -147,7 +147,7 @@ genos %>%
 Unless a set of sites is of interest, it probably makes more sense to use the `--thin` flag. However, if you don't want to use `--thin` one way to get a random set would be:
 
 ```
-zcat < test.vcf.gz | grep -v "#" | cut -f1,2 | shuf -n 100 | sort -V > sites.txt
+zcat < example/test.vcf.gz | grep -v "#" | cut -f1,2 | shuf -n 100 | sort -V > sites.txt
 ```
 
 where `shuf -n` could be modified to a desired number. If your VCF is very large, another approach to get a set would likely be needed. 

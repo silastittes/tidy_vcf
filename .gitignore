@@ -6,3 +6,5 @@ tidy_vcf.egg-info
 build/
 dist/
 .DS_Store
+.Rproj.user
+tidy_vcf.Rproj
