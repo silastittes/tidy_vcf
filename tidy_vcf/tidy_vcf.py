@@ -57,9 +57,13 @@ def main():
 
     def build_info(info_str, info_dictionary, print_header = False):
         info_dict = info_dictionary.copy()
-        info_pairs = [i.split('=') for i in info_str.split(';')]  
-        stats = [i[0] for i in info_pairs]          
-        values = [i[1] for i in info_pairs]
+        if info_str != ".":
+            info_pairs = [i.split('=') for i in info_str.split(';')] 
+            stats = [i[0] for i in info_pairs]          
+            values = [i[1] for i in info_pairs]
+        else:
+            stats = []
+            values = [] 
         for key, value in info_dict.items():
             if key in stats:
                 idx = stats.index(key)  
@@ -178,9 +182,9 @@ def main():
 
     parse_file(args.vcf, args.sites)     
 
-#if __name__ == "__main__":
+if __name__ == "__main__":
 #    # execute only if run as a script
-#    main()
+    main()
 
 #print(vcf_keys)
 
