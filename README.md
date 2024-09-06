@@ -1,4 +1,4 @@
-# tidy_vcf
+# tidy-vcf
 Converts a sample of sites from standard VCF table into tidy format for easy summary stats and plotting.
 
 It's often desirable to get a sense of the site and genotype metrics from a VCF file prior to filtering. This simple program is designed to faciltate that. While there are excellent tools like [`bcftools stats`](http://samtools.github.io/bcftools/bcftools.html#stats) to do this already, the summary statistics gathered are very simple and not very customizable. If you don't mind exchanging speed for more information and flexibility, give this tool a try.
@@ -15,7 +15,7 @@ Depends on `python3` with the `argparse`, `gzip`, and `random` libraries availab
 ## Usage
 
 ```
-usage: tidy_vcf [-h] [-s [SITES]] [-t THIN] -v [VCF] -o [SITES_OUT] -g
+usage: tidy-vcf [-h] [-s [SITES]] [-t THIN] -v [VCF] -o [SITES_OUT] -g
                 [GENOTYPE_OUT]
 
 Given a vcf file, produces a tidy versions of sites and genotypes data, in
@@ -47,20 +47,20 @@ This repo contains necessary examples to test out the utility, but three example
 For example `sites.txt` contains 1,000 sites, the following command will generate to two tidy data files:
 
 ```
-tidy_vcf -s example/sites.txt -v example/test.vcf.gz -o example/test_tidy_sites.vcf -g example/test_tidy_genotypes.vcf
+tidy-vcf -s example/sites.txt -v example/test.vcf.gz -o example/test_tidy_sites.vcf -g example/test_tidy_genotypes.vcf
 ```
 
 Alternatively, you can also using the `-t` argument, which specifies how far apart sampled positions should be:
 
 ```
-tidy_vcf -t 1000 -v example/test.vcf.gz -o example/test_tidy_sites.vcf -g example/test_tidy_genotypes.vcf
+tidy-vcf -t 1000 -v example/test.vcf.gz -o example/test_tidy_sites.vcf -g example/test_tidy_genotypes.vcf
 ```
 
 
 Alternatively, you can use neither `-t` or `-s`, in which case all sites will be used with a warning: 
 
 ```
-tidy_vcf -v example/test.vcf.gz -o example/test_tidy_sites.vcf -g example/test_tidy_genotypes.vcf
+tidy-vcf -v example/test.vcf.gz -o example/test_tidy_sites.vcf -g example/test_tidy_genotypes.vcf
 ```
 
 
