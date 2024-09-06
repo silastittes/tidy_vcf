@@ -1,14 +1,11 @@
 from setuptools import setup, find_packages 
   
-with open('requirements/requirements.txt') as f: 
-    requirements = f.readlines() 
-  
 long_description = 'Given a vcf file, produces a tidy versions of sites and genotypes data, in \
                     efforts to make it easier to calculate summary statitics and visualizations.' 
   
 setup( 
         name ='tidy_vcf', 
-        version ='0.2.0.2', 
+        version ='0.2.0.3', 
         author ='Silas Tittes', 
         author_email ='silas.tittes@gmail.com', 
         url ='https://github.com/silastittes/tidy_vcf', 
@@ -28,7 +25,6 @@ setup(
             "Operating System :: OS Independent", 
         ), 
         keywords ='VCF genetics python package', 
-        install_requires = requirements, 
         zip_safe = False,
         python_requires='>=3.7'
 ) 
