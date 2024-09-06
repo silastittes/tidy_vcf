@@ -8,7 +8,7 @@ long_description = 'Given a vcf file, produces a tidy versions of sites and geno
   
 setup( 
         name ='tidy_vcf', 
-        version ='0.1.2.3', 
+        version ='0.2.0.0', 
         author ='Silas Tittes', 
         author_email ='silas.tittes@gmail.com', 
         url ='https://github.com/silastittes/tidy_vcf', 

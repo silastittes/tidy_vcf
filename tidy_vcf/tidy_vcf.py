@@ -1,197 +1,397 @@
+## TODO: get passing bussiness and specfic sites working
+
+
+import sys
 import gzip
 import argparse
-import random
+import os
+from dataclasses import dataclass
 
-def main():
+
+def parse_args(args):
     parser = argparse.ArgumentParser(
-        
-    prog = "tidy_vcf",    
+        prog="tidy_vcf",
+        description="Given a vcf file, produces a tidy versions of sites and genotypes data, in efforts to make it easier to calculate summary statitics and visualizations.",
+    )
 
-    description="Given a vcf file, produces a tidy versions of sites and genotypes data, in efforts to make it easier to calculate summary statitics and visualizations.")
+    parser.add_argument(
+        "-s",
+        "--sites",
+        nargs="?",
+        type=str,
+        required=False,
+        default=None,
+        help="Input file listing tab delimited sites to output. Each line must be a chromosome/scaffold name and the 1-indexed position of the site.",
+    )
 
-    parser.add_argument('-s', '--sites', nargs="?", type=str, required = False,
-                help='Input file listing tab delimited sites to output. Each line must be a chromosome/scaffold name and the 1-indexed position of the site.')
+    parser.add_argument(
+        "-t",
+        "--thin",
+        type=int,
+        required=False,
+        default=0,
+        help="Alternative to --sites, where a sites will be selected no less than THIN bases apart.",
+    )
 
-    parser.add_argument('-t', '--thin', type=int, required = False,
-        help = 'Alternative to --sites, where a sites will be selected no less than THIN bases apart.')
+    parser.add_argument(
+        "-v",
+        "--vcf",
+        nargs="?",
+        type=str,
+        required=True,
+        help="VCF input file. Should end in .vcf or .gz (plain text or compressed).",
+    )
 
-    parser.add_argument('-v', '--vcf', nargs="?", type=str, required = True,
-                help='VCF input file. Should end in .vcf or .gz (plain text or compressed).')
+    parser.add_argument(
+        "-o",
+        "--sites_out",
+        nargs="?",
+        type=str,
+        required=True,
+        help="Name of output file for tidy sites data. Cannot be used simultaneously with --thin",
+    )
 
-    parser.add_argument('-o', '--sites_out', nargs="?", type=str, required = True,
-                help='Name of output file for tidy sites data. Cannot be used simultaneously with --thin')
+    parser.add_argument(
+        "-g",
+        "--genotype_out",
+        nargs="?",
+        type=str,
+        required=True,
+        help="Name of output file for tidy genotype data.",
+    )
 
-    parser.add_argument('-g', '--genotype_out', nargs="?", type=str, required = True,
-                help='Name of output file for tidy genotype data.')
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    if args.sites and not args.thin:
-        pass
-    elif args.thin and not args.sites:
-        pass
-    elif args.thin and args.sites:
-        raise ValueError(f'--sites (-s) OR --thin (-t) should be used, not both.')
+
+def openfile(filename):
+    if filename.endswith(".gz"):
+        return gzip.open(filename, "rt")
     else:
-        print("neither --sites (-s) or --thin (-t) were given. Using all VCF sites. This might take a while.")
+        return open(filename, "r")
 
-    sites_out = open(args.sites_out, "w") 
-    genotype_file = open(args.genotype_out, "w") 
 
-    def vcf_dict(vcf_file):
+@dataclass
+class Header:
+    """
+    Class to store information about the header of a VCF file.
+
+    Attributes:
+    header: vcf_file
+    """
+
+    vcf_file: str
+
+    def __post_init__(self):
+        self.build_vcf_dicts()
+        self.content_header = f"CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER"
+
+    def build_vcf_dicts(self):
         info_dict = {}
         format_dict = {}
-        with openfile(vcf_file) as fl:
+        filter_dict = {}
+        with openfile(self.vcf_file) as fl:
             for line in fl:
-                if line[0:2] != "##":
+                if not line.startswith("#"):
                     break
-                else:
-                    if line[0:8] == "##FORMAT":
-                        stat = line.split(",")[0].split('=')[-1]
-                        format_dict[stat] = ""
-                    if line[0:6] == "##INFO":
-                        stat = line.split(",")[0].split('=')[-1]
-                        info_dict[stat] = ""
-        return {'info':info_dict , 'format':format_dict}
+                if line.startswith("##FORMAT"):
+                    stat = line.split(",")[0].split("=")[-1]
+                    format_dict.update({stat: "NA"})
+                if line.startswith("##INFO"):
+                    stat = line.split(",")[0].split("=")[-1]
+                    info_dict.update({stat: "NA"})
+                if line.startswith("##FILTER"):
+                    stat = line.split(",")[0].split("=")[-1]
+                    filter_dict.update({stat: "NA"})
+                if line.startswith("#CHROM"):
+                    self.individual_ids = line.strip().split()[9:]
+        self.info = info_dict
+        self.format = format_dict
+        self.filter = filter_dict
 
 
+@dataclass
+class VCFLine:
+    """
+    Class to store information about a an individual VCF line.
 
-    def build_info(info_str, info_dictionary, print_header = False):
-        info_dict = info_dictionary.copy()
-        if info_str != ".":
-            info_pairs = [i.split('=') for i in info_str.split(';')] 
-            stats = [i[0] for i in info_pairs]          
+    Attributes:
+    vcf_line: str
+    """
+
+    vcf_line: str
+
+    def __post_init__(self):
+        self._process_line()
+
+    def _process_line(self):
+        # save all the parts as attributes
+        line_list = self.vcf_line.split()
+        self.gt_formats = line_list[9:]
+
+        (
+            self.CHROM,
+            self.POS,
+            self.ID,
+            self.REF,
+            self.ALT,
+            self.QUAL,
+            self.FILTER,
+            self.INFO,
+            self.FORMAT,
+        ) = line_list[0:9]
+
+        self.content_string = f"{self.CHROM}\t{self.POS}\t{self.ID}\t{self.REF}\t{self.ALT}\t{self.QUAL}\t{self.FILTER}"
+
+    def process_site(self, header: Header):
+        assert len(self.gt_formats) == len(header.individual_ids)
+        self.build_info(header)
+        self.build_formats(header)
+
+    def build_info(self, header: Header):
+        info_dict = header.info.copy()
+        if self.INFO != ".":
+            info_pairs = [i.split("=") for i in self.INFO.split(";")]
+            stats = [i[0] for i in info_pairs]
             values = [i[1] for i in info_pairs]
         else:
             stats = []
-            values = [] 
+            values = []
         for key, value in info_dict.items():
             if key in stats:
-                idx = stats.index(key)  
-                info_dict[key] += f"{values[idx]}"
-            else: 
-                info_dict[key] += "NA"
-        #return info_dict
-        if print_header:
-            return '\t'.join(info_dict.keys())
-        else:
-            return '\t'.join(info_dict.values())
+                idx = stats.index(key)
+                info_dict.update({key: str(values[idx])})
+        infos = "\t".join(info_dict.values())
+        self.info_string = f"{self.content_string}\t{infos}"
 
-    #def build_GTs(GTs, format_dict, print_header = False):
-    #    gts = [g.split(":") for g in GTs]
-    #    if print_header:
-    #        print('\t'.join(format_dict.keys()))
-        
+    def build_formats(self, header: Header):
+        format_list = []
+        # list of the format names
+        format_elements = self.FORMAT.split(":")
+        for gt in self.gt_formats:
+            ind_formats = gt.split(":")
+            format_dict = header.format.copy()
+            for element in format_elements:
+                idx = format_elements.index(element)
+                format_dict.update({element: ind_formats[idx]})
+            format_list.append(format_dict)
+        format_strings = [
+            ind + "\t" + "\t".join(f.values())
+            for ind, f in zip(header.individual_ids, format_list)
+        ]
+        self.format_strings = [f"{self.content_string}\t{f}" for f in format_strings]
 
-    def get_inds(vcf_line):
-        return vcf_line.split("\t")[9:]
-      
-    def df_content(CHROM, POS, ID, REF, ALT, QUAL, FILTER):
-        return f"{CHROM}\t{POS}\t{ID}\t{REF}\t{ALT}\t{QUAL}\t{FILTER}"
 
-    def parse_GTs(vcf_line):
-        GTs = get_inds(vcf_line)
-        return [g.split(":") for g in GTs]
+@dataclass
+class TidyVCF:
+    """
+    Collect information about a VCF file and parse.
 
-    def parse_sites(sites_file):
-        sites_dict = {}
-        with open(sites_file) as fl:
+    Attributes:
+    vcf_file: str
+        Path to the VCF file.
+    """
+
+    vcf_file: str
+    sites_out: str
+    genotype_out: str
+    sites_file: str = None
+    thin: int = 0
+
+    def __post_init__(self):
+        self.previous_chrom: str = ""
+        self.previous_pos: int = 0
+        if self.sites_file:
+            self.parse_sites()
+
+    def parse_sites(self):
+        sites_dict = set()
+        with open(self.sites_file) as fl:
             for line in fl:
                 chrom, site = line.strip().split()
-                site_str = f'{chrom}\t{site}'
-                if site_str not in sites_dict:
-                    sites_dict[site_str] = ""
-        return sites_dict
+                site_str = f"{chrom}\t{site}"
+                sites_dict.add(site_str)
+        self.sites_dict = sites_dict
 
-    def sites_pass(CHROM, POS, sites_dict = None, previous_chrom = '', previous_pos = ''):
+    def sites_pass(self, vcfline: VCFLine):
         state = False
-        if args.sites:
-            if f'{CHROM}\t{POS}' in sites_dict:
-                state =True
-        if args.thin:
-            if CHROM == previous_chrom and int(POS) - int(previous_pos) > args.thin:
+        if self.sites_file is not None:
+            if f"{vcfline.CHROM}\t{vcfline.POS}" in self.sites_dict:
                 state = True
-            if CHROM != previous_chrom:
+        if self.thin:
+            if (
+                vcfline.CHROM == self.previous_chrom
+                and int(vcfline.POS) - int(self.previous_pos) > self.thin
+            ):
                 state = True
-                #print(CHROM == previous_chrom)
-                #print(f'prev is {int(previous_pos)}, current is {int(POS)}')
-                #print(f'prev chrom is {previous_chrom}, current is {CHROM}')
+            if vcfline.CHROM != self.previous_chrom:
+                state = True
+        if self.sites_file is None and self.thin < 1:
+            state = True
         return state
 
-
-    def openfile(filename):
-        if filename.endswith(".gz"):
-            return gzip.open(filename, "rt")
-        else:
-            return open(filename, "r")
-
-    def process_site(line, inds, vcf_keys):
-        vcf_list = line.strip().split("\t")
-        CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT = vcf_list[0:9]
-        GTs = vcf_list[9:]
-        gts = [g.split(":") for g in GTs]
-        site_row = df_content(CHROM, POS, ID, REF, ALT, QUAL, FILTER)
-        #print("LENGTHS")
-        #print(len(inds), len(gts))
-        row_iter = zip(inds, gts)
-        info_data = build_info(INFO, vcf_keys['info'])
-        
-        print(f"{site_row}\t{info_data}", file = sites_out)
-        for ind, gt in row_iter:
-            gt_final = '\t'.join(gt)
-            print(f"{ind}\t{site_row}\t{gt_final}", file = genotype_file)
-      
-    def parse_file(vcf, sites_file = None):
-        previous_chrom = ''
-        previous_pos = 0
-        vcf_keys = vcf_dict(args.vcf)
+    def parse_file(self, vcf, header: Header):
+        sites_out = open(self.sites_out, "w")
+        genotype_out = open(self.genotype_out, "w")
+        self.previous_chrom = ""
+        self.previous_pos = 0
         first = True
-        if args.sites:
-            sites_dict = parse_sites(sites_file)
         with openfile(vcf) as fl:
             for line in fl:
-                if line[0:2] == "##":
-                    ln = line.strip()
-                    print(ln, file = sites_out)
-                    print(ln, file = genotype_file)
-                elif line[0:6] == "#CHROM":
-                    inds = get_inds(line.strip())
-                elif line[0] != "#":
-                    vcf_list = line.strip().split("\t")
-                    CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT = vcf_list[0:9]
-                    if first:
-                        GTs = vcf_list[9:]
-                        #info_headers = '\t'.join([sc.split("=")[0] for sc in INFO.split(";")])
-                        info_headers = build_info(INFO, vcf_keys['info'], True)
-                        format_l = '\t'.join(FORMAT.split(":"))
-                        print(f"CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\t{info_headers}", file = sites_out)
-                        print(f"IND\tCHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\t{format_l}", file = genotype_file)
-                        process_site(line, inds, vcf_keys)
-                        first = False
-                    else:
-                        passing = False
-                        if args.sites:
-                            passing = sites_pass(CHROM, POS, sites_dict)
-                        elif args.thin: 
-                            passing = sites_pass(CHROM, POS, None, previous_chrom, previous_pos)
-                            previous_chrom = CHROM
-                            previous_pos = POS
-                        else:
-                            passing = True
-                        if passing:
-                            process_site(line, inds, vcf_keys)
+                ln = line.strip()
+                if not ln:
+                    continue
+                if line.startswith("#"):
+                    print(ln, file=sites_out)
+                    print(ln, file=genotype_out)
+                if not line.startswith("#") and first:
+                    first = False
+                    info_keys_string = "\t".join(h.info.keys())
+                    format_keys_string = "\t".join(h.format.keys())
+                    print(f"{h.content_header}\t{info_keys_string}", file=sites_out)
+                    print(
+                        f"{h.content_header}\tIND\t{format_keys_string}",
+                        file=genotype_out,
+                    )
+                if not line.startswith("#") and not first:
+                    vcfline = VCFLine(ln)
+                    passing = self.sites_pass(vcfline)
+                    self.previous_chrom = vcfline.CHROM
+                    self.previous_pos = vcfline.POS
+                    if passing:
+                        vcfline.process_site(header)
+                        print(vcfline.info_string, file=sites_out)
+                        for gt in vcfline.format_strings:
+                            print(gt, file=genotype_out)
 
-    parse_file(args.vcf, args.sites)     
 
 if __name__ == "__main__":
-#    # execute only if run as a script
-    main()
+    args = parse_args(sys.argv[1:])
+    if args.sites and args.thin < 1:
+        pass
+    elif args.thin >= 1 and not args.sites:
+        pass
+    elif args.thin >= 1 and args.sites:
+        raise ValueError(f"--sites (-s) OR --thin (-t) should be used, not both.")
+    else:
+        print(
+            "neither --sites (-s) or --thin (-t) were given. Using all VCF sites. This might take a while."
+        )
 
-#print(vcf_keys)
+    h = Header(args.vcf)
+    v = TidyVCF(
+        vcf_file=args.vcf,
+        sites_out=args.sites_out,
+        genotype_out=args.genotype_out,
+        sites_file=args.sites,
+        thin=args.thin,
+    )
+    v.parse_file(args.vcf, h)
 
-#print(vcf_keys['info'])
-#ss = "AC=7;AF=0.130;AN=54;BaseQRankSum=-4.342;ClippingRankSum=0.000;DP=102;ExcessHet=0.0834"
-#build_info(ss, vcf_keys['info'], True)
-#print(build_info(ss, vcf_keys['format']))
-#ss = "AC=7;AF=0.130;AN=54;BaseQRankSum=-4.342;ClippingRankSum=0.000;DP=102;ExcessHet=0.0834"
-#print(build_info(ss, vcf_keys['info'], True))
-#print(build_info(ss, vcf_keys['format']))
+
+### testing ###
+line = "1       89211   .       G       .       19.64   QUAL_filter     BaseQRankSum=-1.383;DP=65;ExcessHet=3.01;MLEAC=.;MLEAF=.;MQ=23.2;MQRankSum=-0.674;ReadPosRankSum=0.21   GT:DP:RGQ       0/0:2:6   0/0:5:15        0/0:1:3 0/0:2:6 0/0:6:18        0/0:6:8 0/0:5:12        0/0:12:36       0/0:5:15        0/0:3:9 0/0:8:21        0/0:9:21        0/0:3:9"
+vcf_content = (
+    """##FORMAT=<ID=AD,Number=R,Type=Integer,Description="">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="">
+##FORMAT=<ID=MIN_DP,Number=1,Type=Integer,Description="">
+##FORMAT=<ID=PGT,Number=1,Type=String,Description="">
+##FORMAT=<ID=PID,Number=1,Type=String,Description="">
+##FORMAT=<ID=PL,Number=G,Type=Integer,Description="">
+##FORMAT=<ID=PS,Number=1,Type=Integer,Description="">
+##FORMAT=<ID=RGQ,Number=1,Type=Integer,Description="">
+##FORMAT=<ID=SB,Number=4,Type=Integer,Description="">
+##INFO=<ID=AC,Number=A,Type=Integer,Description="">
+##INFO=<ID=AF,Number=A,Type=Float,Description="">
+##INFO=<ID=AN,Number=1,Type=Integer,Description="">
+##INFO=<ID=BaseQRankSum,Number=1,Type=Float,Description="">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="">
+##INFO=<ID=END,Number=1,Type=Integer,Description="">
+##INFO=<ID=ExcessHet,Number=1,Type=Float,Description="">
+##INFO=<ID=FS,Number=1,Type=Float,Description="">
+##INFO=<ID=InbreedingCoeff,Number=1,Type=Float,Description="">
+##INFO=<ID=MLEAC,Number=A,Type=Integer,Description="">
+##INFO=<ID=MLEAF,Number=A,Type=Float,Description="">
+##INFO=<ID=MQ,Number=1,Type=Float,Description="">
+##INFO=<ID=MQRankSum,Number=1,Type=Float,Description="">
+##INFO=<ID=QD,Number=1,Type=Float,Description="">
+##INFO=<ID=RAW_MQandDP,Number=2,Type=Integer,Description="">
+##INFO=<ID=ReadPosRankSum,Number=1,Type=Float,Description="">
+##INFO=<ID=SOR,Number=1,Type=Float,Description="">
+#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  Oblat_F_10      Oblat_F_11      Oblat_F_2       Oblat_F_5       Oblat_F_6       Oblat_F_7       Oblat_F_8       Oblat_F_9 Oblat_M_01      Oblat_M_12      Oblat_M_13      Oblat_M_3       Oblat_M_4
+"""
+    + line
+)
+
+VCF = "test.vcf"
+
+
+class TestClass:
+
+    def make_test_vcf(self):
+        with open(VCF, "w") as fl:
+            print(vcf_content, file=fl)
+
+    def delete_test_vcf(self):
+        os.remove(VCF)
+
+    def test_header(self):
+        self.make_test_vcf()
+        h = Header(VCF)
+        IDs = [
+            "Oblat_F_10",
+            "Oblat_F_11",
+            "Oblat_F_2",
+            "Oblat_F_5",
+            "Oblat_F_6",
+            "Oblat_F_7",
+            "Oblat_F_8",
+            "Oblat_F_9",
+            "Oblat_M_01",
+            "Oblat_M_12",
+            "Oblat_M_13",
+            "Oblat_M_3",
+            "Oblat_M_4",
+        ]
+
+        all_keys = [
+            "AC",
+            "AF",
+            "AN",
+            "BaseQRankSum",
+            "DP",
+            "END",
+            "ExcessHet",
+            "FS",
+            "InbreedingCoeff",
+            "MLEAC",
+            "MLEAF",
+            "MQ",
+            "MQRankSum",
+            "QD",
+            "RAW_MQandDP",
+            "ReadPosRankSum",
+            "SOR",
+        ]
+
+        assert h.individual_ids == IDs
+        info_keys = list(h.info.keys())
+        assert sum([int(i == j) for i, j in zip(info_keys, all_keys)]) == len(all_keys)
+        self.delete_test_vcf()
+
+    def test_vcf_line(self):
+        self.make_test_vcf()
+        h = Header(VCF)
+        v = VCFLine(line)
+        v.build_formats(h)
+        v.process_site(h)
+        assert (
+            v.info_string
+            == "1\t89211\t.\tG\t.\t19.64\tQUAL_filter\tNA\tNA\tNA\t-1.383\t65\tNA\t3.01\tNA\tNA\t.\t.\t23.2\t-0.674\tNA\tNA\t0.21\tNA"
+        )
+        assert (
+            v.format_strings[0]
+            == "1\t89211\t.\tG\t.\t19.64\tQUAL_filter\tOblat_F_10\tNA\t2\tNA\t0/0\tNA\tNA\tNA\tNA\tNA\t6\tNA"
+        )
+        self.delete_test_vcf()
